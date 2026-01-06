@@ -64,22 +64,21 @@ if (remoteVersion != localVersion)
         DirDelete(extractDir, true)
     DirCreate(extractDir)
 
-    ; Extract using PowerShell - use Chr(34) for literal quotes
-    psCmd := "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command " 
-           . Chr(34) . "& {Add-Type -AssemblyName System.IO.Compression.FileSystem; "
-           . "[System.IO.Compression.ZipFile]::ExtractToDirectory("
-           . Chr(39) . zipFile . Chr(39) . ", " 
-           . Chr(39) . extractDir . Chr(39) . ")}" . Chr(34)
+    ; Create a PowerShell script file to extract the ZIP
+    psScriptFile := tempDir "\extract.ps1"
+    psScript := "Add-Type -AssemblyName System.IO.Compression.FileSystem`n"
+              . "[System.IO.Compression.ZipFile]::ExtractToDirectory('" . zipFile . "', '" . extractDir . "')"
     
     try {
-        RunWait(psCmd, , "Hide")
-    } catch as err {
-        MsgBox("PowerShell extraction failed: " err.Message, "Update Error")
-        return
+        FileDelete(psScriptFile)
     }
-
-    ; Wait a moment for file system to catch up
-    Sleep(1000)
+    FileAppend(psScript, psScriptFile)
+    
+    ; Run the PowerShell script
+    RunWait("powershell.exe -NoProfile -ExecutionPolicy Bypass -File " . Chr(34) . psScriptFile . Chr(34), , "Hide")
+    
+    ; Wait for extraction
+    Sleep(2000)
 
     ; Find the actual extracted folder
     repoRoot := ""
@@ -91,7 +90,14 @@ if (remoteVersion != localVersion)
 
     ; Verify extraction succeeded
     if (repoRoot = "" || !DirExist(repoRoot)) {
-        MsgBox("Extraction failed. Contents of extract dir:`n" (DirExist(extractDir) ? "Folder exists but empty" : "Folder doesn't exist"), "Update Error")
+        ; List what's actually in the extract dir for debugging
+        contents := ""
+        Loop Files, extractDir "\*.*", "FD"
+            contents .= A_LoopFileName "`n"
+        
+        MsgBox("Extraction failed.`n`nZIP exists: " (FileExist(zipFile) ? "Yes" : "No") 
+             . "`nExtract dir exists: " (DirExist(extractDir) ? "Yes" : "No")
+             . "`n`nContents:`n" (contents = "" ? "(empty)" : contents), "Update Error")
         return
     }
 
