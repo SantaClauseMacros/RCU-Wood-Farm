@@ -498,13 +498,35 @@ StartWoodFarming(woodType) {
     }
 }
 
+LookForGoldenTrees() {
+    targetColor := 0xFFDB3B
+    colorVariation := 20
+    
+    searchBoxes := [
+        {x1: 346, y1: 265, x2: 374, y2: 343},
+        {x1: 413, y1: 272, x2: 448, y2: 336},
+        {x1: 340, y1: 251, x2: 439, y2: 282}
+    ]
+
+    for index, box in searchBoxes {
+        if PixelSearch(&foundX, &foundY, box.x1, box.y1, box.x2, box.y2, targetColor, colorVariation) {
+            RobloxClick(foundX, foundY)
+            WaitForTreeToBreak()  ; Only waits if golden tree was found
+            return true
+        }
+    }
+    
+    return false  ; No golden tree found, don't wait
+}
+
 WaitForTreeToBreak() {
     global
     Sleep(250)
     colorFound := false
     timeout := 0
     
-    while (!colorFound && timeout < 100) {
+    ; Wait up to 1 second (10 iterations * 100ms) for blue color to appear
+    while (!colorFound && timeout < 10) {
         if (!FarmingActive)
             return
         
@@ -516,16 +538,20 @@ WaitForTreeToBreak() {
         }
     }
     
-    if (colorFound) {
-        while (PixelSearch(&foundX, &foundY, 320, 518, 320, 518, 0x2FB7FC)) {
-            if (!FarmingActive)
-                return
-            Sleep(100)
-        }
-        
-        Sleep 250
-        LookForGoldenTrees()
+    ; If blue never appeared after 1 second, skip and continue
+    if (!colorFound) {
+        return
     }
+    
+    ; Blue found, now wait for it to disappear (tree broken)
+    while (PixelSearch(&foundX, &foundY, 320, 518, 320, 518, 0x2FB7FC)) {
+        if (!FarmingActive)
+            return
+        Sleep(100)
+    }
+    
+    Sleep(250)
+    LookForGoldenTrees()  ; Check for golden trees after breaking
 }
 
 WaitForClickButton() {
@@ -546,27 +572,6 @@ WaitForTeleportIcon() {
             return
         }
     }
-}
-
-LookForGoldenTrees() {
-    targetColor := 0xFFDB3B
-    colorVariation := 35
-    
-    searchBoxes := [
-        {x1: 346, y1: 265, x2: 374, y2: 343},
-        {x1: 413, y1: 272, x2: 448, y2: 336},
-        {x1: 340, y1: 251, x2: 439, y2: 282}
-    ]
-
-    for index, box in searchBoxes {
-        if PixelSearch(&foundX, &foundY, box.x1, box.y1, box.x2, box.y2, targetColor, colorVariation) {
-           RobloxClick(foundX, foundY)
-           WaitForTreeToBreak()
-            return true
-        }
-    }
-    
-    return false
 }
 
 SpawnWorldCameraSetup() {
