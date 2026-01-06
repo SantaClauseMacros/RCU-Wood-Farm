@@ -1,6 +1,7 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 #Warn All, Off
+#Include <OCR>
 SetWorkingDir A_ScriptDir
 CoordMode "Mouse", "Client"
 CoordMode "Pixel", "Client"
