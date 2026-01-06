@@ -53,34 +53,41 @@ if (remoteVersion != localVersion)
         return
     }
 
+    ; Verify ZIP was downloaded
+    if !FileExist(zipFile) {
+        MsgBox("ZIP file not found after download", "Update Error")
+        return
+    }
+
     ; Ensure extract directory exists and is empty
     if DirExist(extractDir)
         DirDelete(extractDir, true)
     DirCreate(extractDir)
 
-    ; Extract ZIP using Shell.Application COM object
+    ; Extract using PowerShell (more reliable than COM for some systems)
+    psCmd := 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory(''' . zipFile . ''', ''' . extractDir . ''')}"'
+    
     try {
-        shell := ComObject("Shell.Application")
-        zip := shell.NameSpace(zipFile)
-        dest := shell.NameSpace(extractDir)
-        dest.CopyHere(zip.Items, 4|16) ; 4=no progress dialog, 16=yes to all
-        Sleep(2000) ; Wait for extraction to complete
+        RunWait(psCmd, , "Hide")
     } catch as err {
-        MsgBox("Failed to extract ZIP: " err.Message, "Update Error")
+        MsgBox("PowerShell extraction failed: " err.Message, "Update Error")
         return
     }
 
-    ; Find the actual extracted folder (should be the only subfolder)
+    ; Wait a moment for file system to catch up
+    Sleep(1000)
+
+    ; Find the actual extracted folder
     repoRoot := ""
     Loop Files, extractDir "\*", "D"
     {
         repoRoot := A_LoopFileFullPath
-        break ; Get first (and should be only) directory
+        break
     }
 
     ; Verify extraction succeeded
     if (repoRoot = "" || !DirExist(repoRoot)) {
-        MsgBox("No extracted folder found in: " extractDir, "Update Error")
+        MsgBox("Extraction failed. Contents of extract dir:`n" (DirExist(extractDir) ? "Folder exists but empty" : "Folder doesn't exist"), "Update Error")
         return
     }
 
