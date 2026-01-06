@@ -147,6 +147,7 @@ QueueIndex := 1
 MainTimer := ""
 InitializationComplete := false
 RobloxHandle := ""
+TimerRunning := false  ; NEW: Prevent timer overlap
 
 Stats := {
     Sessions: 0,
@@ -424,7 +425,7 @@ StartFarming(*) {
     }
     
     FarmingActive := true
-    QueueIndex := 1
+    QueueIndex := 1  ; FIXED: Reset queue index on start
     Stats.Sessions++
     
     StatusLabel.Text := "Starting farming session..."
@@ -442,6 +443,7 @@ StopFarming(*) {
     if (MainTimer != "") {
         SetTimer(MainTimer, 0)
         MainTimer := ""
+        TimerRunning := false  ; FIXED: Reset timer flag
     }
     
     StatusLabel.Text := "Paused"
@@ -466,6 +468,7 @@ ProcessNextItem() {
         }
         Stats.TotalTime += sessionTime
         
+        QueueIndex := 1  ; FIXED: Reset queue index when complete
         UpdateQueueDisplay()
         SaveStats()
         
@@ -511,12 +514,12 @@ LookForGoldenTrees() {
     for index, box in searchBoxes {
         if PixelSearch(&foundX, &foundY, box.x1, box.y1, box.x2, box.y2, targetColor, colorVariation) {
             RobloxClick(foundX, foundY)
-            WaitForTreeToBreak()  ; Only waits if golden tree was found
+            WaitForTreeToBreak()
             return true
         }
     }
     
-    return false  ; No golden tree found, don't wait
+    return false
 }
 
 WaitForTreeToBreak() {
@@ -525,7 +528,7 @@ WaitForTreeToBreak() {
     colorFound := false
     timeout := 0
     
-    ; Wait up to 1 second (10 iterations * 100ms) for blue color to appear
+    ; Wait up to 1 second for blue color to appear
     while (!colorFound && timeout < 10) {
         if (!FarmingActive)
             return
@@ -538,12 +541,12 @@ WaitForTreeToBreak() {
         }
     }
     
-    ; If blue never appeared after 1 second, skip and continue
+    ; If blue never appeared, skip
     if (!colorFound) {
         return
     }
     
-    ; Blue found, now wait for it to disappear (tree broken)
+    ; Wait for blue to disappear (tree broken)
     while (PixelSearch(&foundX, &foundY, 320, 518, 320, 518, 0x2FB7FC)) {
         if (!FarmingActive)
             return
@@ -551,35 +554,55 @@ WaitForTreeToBreak() {
     }
     
     Sleep(250)
-    LookForGoldenTrees()  ; Check for golden trees after breaking
+    LookForGoldenTrees()
 }
 
+; FIXED: Added 10 second timeout
 WaitForClickButton() {
     Sleep 250
     imagePath := A_ScriptDir "\images\Click Button.png"
+    timeout := 0
+    maxTimeout := 100  ; 10 seconds (100 * 100ms)
+    
     Loop {
         if ImageSearch(&x, &y, 0, 0, A_ScreenWidth, A_ScreenHeight, "*50 " imagePath) {
-            return
+            return true
+        }
+        Sleep 100
+        timeout++
+        if (timeout >= maxTimeout) {
+            MsgBox("Timeout waiting for Click Button", "Error")
+            return false
         }
     }
 }
 
+; FIXED: Added 10 second timeout
 WaitForTeleportIcon() {
     Sleep 250
     imagePath := A_ScriptDir "\images\Teleport Icon.png"
+    timeout := 0
+    maxTimeout := 100  ; 10 seconds (100 * 100ms)
+    
     Loop {
         if ImageSearch(&x, &y, 0, 0, A_ScreenWidth, A_ScreenHeight, "*50 " imagePath) {
-            return
+            return true
+        }
+        Sleep 100
+        timeout++
+        if (timeout >= maxTimeout) {
+            MsgBox("Timeout waiting for Teleport Icon", "Error")
+            return false
         }
     }
 }
 
 SpawnWorldCameraSetup() {
     Loop 20 {
-    RobloxSendKey "{WheelUp}"
+        RobloxSendKey("{WheelUp}")  ; FIXED: Consistent with RobloxSendKey
     }
     Loop 15 {
-    RobloxSendKey "{WheelDown}"
+        RobloxSendKey("{WheelDown}")  ; FIXED: Consistent with RobloxSendKey
     }
 }
 
@@ -598,17 +621,17 @@ FarmWoodTrees() {
     global
     while (FarmingActive && TimeLeft > 0) {
         trees := [ 
-        {x: 626, y: 156},
-        {x: 771, y: 175},
-        {x: 186, y: 161},
-        {x: 162, y: 57},
-        {x: 613, y: 256},
-        {x: 124, y: 167},
-        {x: 251, y: 174},
-        {x: 121, y: 100},
-        {x: 6, y: 103},
-        {x: 748, y: 160}
-    ]   
+            {x: 626, y: 156},
+            {x: 771, y: 175},
+            {x: 186, y: 161},
+            {x: 162, y: 57},
+            {x: 613, y: 256},
+            {x: 124, y: 167},
+            {x: 251, y: 174},
+            {x: 121, y: 100},
+            {x: 6, y: 103},
+            {x: 748, y: 160}
+        ]   
         
         for index, tree in trees {
             if (!FarmingActive)
@@ -618,7 +641,7 @@ FarmWoodTrees() {
             WaitForTreeToBreak()
             
             if (index = 8) {
-                Send("{WheelUp}")
+                RobloxSendKey("{WheelUp}")  ; FIXED: Consistent with RobloxSendKey
             }
         }
 
@@ -631,10 +654,10 @@ FarmWoodTrees() {
 
 DesertWorldCameraSetup() {
     Loop 20 {
-    RobloxSendKey "{WheelUp}"
+        RobloxSendKey("{WheelUp}")  ; FIXED: Consistent with RobloxSendKey
     }
     Loop 15 {
-    RobloxSendKey "{WheelDown}"
+        RobloxSendKey("{WheelDown}")  ; FIXED: Consistent with RobloxSendKey
     }
 }
 
@@ -644,7 +667,7 @@ TeleportToDesertWorld() {
     Sleep 100
     RobloxClick(400, 300)
     Sleep 100
-    RobloxSendKey "{WheelDown}"
+    RobloxSendKey("{WheelDown}")
     Sleep 100
     RobloxClick(492, 348)
     WaitForClickButton()
@@ -653,16 +676,16 @@ TeleportToDesertWorld() {
     FarmCactusTrees()
 }
 
-    FarmCactusTrees() {
+FarmCactusTrees() {
     global
     while (FarmingActive && TimeLeft > 0) {
         trees := [ 
-        {x: 502, y: 272},
-        {x: 184, y: 135},
-        {x: 481, y: 299},
-        {x: 634, y: 331},
-        {x: 525, y: 129}
-    ]   
+            {x: 502, y: 272},
+            {x: 184, y: 135},
+            {x: 481, y: 299},
+            {x: 634, y: 331},
+            {x: 525, y: 129}
+        ]   
         
         for index, tree in trees {
             if (!FarmingActive)
@@ -673,7 +696,7 @@ TeleportToDesertWorld() {
             
             if (index = 4) {
                 Loop 4 {
-                RobloxSendKey "{WheelUp}"
+                    RobloxSendKey("{WheelUp}")  ; FIXED: Consistent with RobloxSendKey
                 }
             }
         }
@@ -695,13 +718,13 @@ TeleportToMagicWorld() {
     RobloxClick(705, 325)
     Sleep(100)
     Loop 4 {
-    RobloxSendKey "{WheelDown}"
+        RobloxSendKey("{WheelDown}")
     }
     RobloxClick(492, 350)
     WaitForClickButton()
     Sleep 100
     Loop 4 {
-    RobloxSendKey "{WheelDown}"
+        RobloxSendKey("{WheelDown}")
     }
     Sleep 500
     FarmWoodTrees()
@@ -711,17 +734,17 @@ FarmMagicTrees() {
     global
     while (FarmingActive && TimeLeft > 0) {
         trees := [ 
-        {x: 626, y: 156},
-        {x: 771, y: 175},
-        {x: 186, y: 161},
-        {x: 162, y: 57},
-        {x: 613, y: 256},
-        {x: 124, y: 167},
-        {x: 251, y: 174},
-        {x: 121, y: 100},
-        {x: 6, y: 103},
-        {x: 748, y: 160}
-    ]   
+            {x: 626, y: 156},
+            {x: 771, y: 175},
+            {x: 186, y: 161},
+            {x: 162, y: 57},
+            {x: 613, y: 256},
+            {x: 124, y: 167},
+            {x: 251, y: 174},
+            {x: 121, y: 100},
+            {x: 6, y: 103},
+            {x: 748, y: 160}
+        ]   
         
         for index, tree in trees {
             if (!FarmingActive)
@@ -731,7 +754,7 @@ FarmMagicTrees() {
             WaitForTreeToBreak()
             
             if (index = 8) {
-                Send("{WheelUp}")
+                RobloxSendKey("{WheelUp}")  ; FIXED: Consistent with RobloxSendKey
             }
         }
 
@@ -742,35 +765,47 @@ FarmMagicTrees() {
     }
 }
 
+; FIXED: Added timer overlap protection
 UpdateTimer() {
     global
-    if (!FarmingActive) {
-        if (MainTimer != "") {
-            SetTimer(MainTimer, 0)
-            MainTimer := ""
-        }
+    
+    ; Prevent timer overlap
+    if (TimerRunning)
         return
-    }
     
-    if (TimeLeft <= 0) {
-        QueueIndex++
-        if (MainTimer != "") {
-            SetTimer(MainTimer, 0)
-            MainTimer := ""
+    TimerRunning := true
+    
+    try {
+        if (!FarmingActive) {
+            if (MainTimer != "") {
+                SetTimer(MainTimer, 0)
+                MainTimer := ""
+            }
+            return
         }
-        ProcessNextItem()
-        return
-    }
-    
-    TimeLeft--
-    minutes := TimeLeft // 60
-    seconds := Mod(TimeLeft, 60)
-    TimeLabel.Text := "Time: " . minutes . ":" . Format("{:02d}", seconds)
-    
-    if (QueueIndex <= QueueList.Length) {
-        totalTime := QueueList[QueueIndex].Duration * 60
-        progress := ((totalTime - TimeLeft) / totalTime) * 100
-        ProgressBar.Value := progress
+        
+        if (TimeLeft <= 0) {
+            QueueIndex++
+            if (MainTimer != "") {
+                SetTimer(MainTimer, 0)
+                MainTimer := ""
+            }
+            ProcessNextItem()
+            return
+        }
+        
+        TimeLeft--
+        minutes := TimeLeft // 60
+        seconds := Mod(TimeLeft, 60)
+        TimeLabel.Text := "Time: " . minutes . ":" . Format("{:02d}", seconds)
+        
+        if (QueueIndex <= QueueList.Length) {
+            totalTime := QueueList[QueueIndex].Duration * 60
+            progress := ((totalTime - TimeLeft) / totalTime) * 100
+            ProgressBar.Value := progress
+        }
+    } finally {
+        TimerRunning := false
     }
 }
 
@@ -894,8 +929,6 @@ FormatDuration(seconds) {
     hours := seconds // 3600
     minutes := (seconds - hours * 3600) // 60
     if (hours > 0)
-        return hours . "h " . minutes . "m"
-    else
         return minutes . "m"
 }
 
