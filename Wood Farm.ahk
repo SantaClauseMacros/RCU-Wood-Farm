@@ -1,10 +1,119 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 #SingleInstance Force
 #Warn All, Off
 SetWorkingDir A_ScriptDir
 CoordMode "Mouse", "Client"
 CoordMode "Pixel", "Client"
 SetMouseDelay 10
+
+; ===============================
+; AUTO UPDATER
+; Repo: SantaClauseMacros/RCU-Wood-Farm
+; ===============================
+
+localVersionFile := A_ScriptDir "\version.txt"
+remoteVersionURL := "https://raw.githubusercontent.com/SantaClauseMacros/RCU-Wood-Farm/main/version.txt"
+zipURL := "https://github.com/SantaClauseMacros/RCU-Wood-Farm/archive/refs/heads/main.zip"
+
+tempDir := A_Temp "\RCU_WoodFarm_Update"
+zipFile := tempDir "\update.zip"
+extractDir := tempDir "\extract"
+
+DirCreate(tempDir)
+
+; Read local version
+localVersion := FileExist(localVersionFile)
+    ? Trim(FileRead(localVersionFile))
+    : "0.0.0"
+
+; Download remote version with error handling
+try {
+    Download(remoteVersionURL, tempDir "\version.txt")
+    remoteVersion := Trim(FileRead(tempDir "\version.txt"))
+} catch as err {
+    MsgBox("Failed to check for updates: " err.Message "`n`nURL: " remoteVersionURL, "Update Error")
+    return
+}
+
+; Validate version format
+if (remoteVersion = "" || StrLen(remoteVersion) > 20) {
+    MsgBox("Invalid version format received: " remoteVersion, "Update Error")
+    return
+}
+
+if (remoteVersion != localVersion)
+{
+    MsgBox("Updating RCU Wood Farm to v" remoteVersion, "Update")
+
+    ; Download repo ZIP
+    try {
+        Download(zipURL, zipFile)
+    } catch as err {
+        MsgBox("Failed to download update: " err.Message, "Update Error")
+        return
+    }
+
+    ; Ensure extract directory exists and is empty
+    if DirExist(extractDir)
+        DirDelete(extractDir, true)
+    DirCreate(extractDir)
+
+    ; Extract ZIP using Shell.Application COM object
+    try {
+        shell := ComObject("Shell.Application")
+        zip := shell.NameSpace(zipFile)
+        dest := shell.NameSpace(extractDir)
+        dest.CopyHere(zip.Items, 4|16) ; 4=no progress dialog, 16=yes to all
+        Sleep(2000) ; Wait for extraction to complete
+    } catch as err {
+        MsgBox("Failed to extract ZIP: " err.Message, "Update Error")
+        return
+    }
+
+    repoRoot := extractDir "\RCU-Wood-Farm-main"
+
+    ; Verify extraction succeeded
+    if !DirExist(repoRoot) {
+        MsgBox("Extraction folder not found at: " repoRoot, "Update Error")
+        return
+    }
+
+    ; Copy files (skip Settings)
+    Loop Files, repoRoot "\*", "FD"
+    {
+        if (A_LoopFileName = "Settings")
+            continue
+
+        src := A_LoopFileFullPath
+        dest := A_ScriptDir "\" A_LoopFileName
+
+        try {
+            if InStr(A_LoopFileAttrib, "D")
+                DirCopy(src, dest, true)
+            else
+                FileCopy(src, dest, true)
+        } catch as err {
+            MsgBox("Failed to copy " A_LoopFileName ": " err.Message, "Update Error")
+        }
+    }
+
+    ; Update local version file
+    FileDelete(localVersionFile)
+    FileCopy(tempDir "\version.txt", localVersionFile, true)
+
+    ; Cleanup
+    DirDelete(tempDir, true)
+
+    MsgBox("Update complete! Restarting script...", "Update Success")
+
+    ; Restart script
+    Run('"' A_AhkPath '" "' A_ScriptFullPath '"')
+    ExitApp
+}
+
+; ===============================
+; END AUTO UPDATER
+; ===============================
 
 FarmingActive := false
 CurrentWood := ""
@@ -428,6 +537,7 @@ LookForGoldenTrees() {
     for index, box in searchBoxes {
         if PixelSearch(&foundX, &foundY, box.x1, box.y1, box.x2, box.y2, targetColor, colorVariation) {
            RobloxClick(foundX, foundY)
+           WaitForTreeToBreak()
             return true
         }
     }
