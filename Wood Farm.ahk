@@ -64,8 +64,12 @@ if (remoteVersion != localVersion)
         DirDelete(extractDir, true)
     DirCreate(extractDir)
 
-    ; Extract using PowerShell (more reliable than COM for some systems)
-    psCmd := 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& {Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory(''' . zipFile . ''', ''' . extractDir . ''')}"'
+    ; Extract using PowerShell - use Chr(34) for literal quotes
+    psCmd := "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command " 
+           . Chr(34) . "& {Add-Type -AssemblyName System.IO.Compression.FileSystem; "
+           . "[System.IO.Compression.ZipFile]::ExtractToDirectory("
+           . Chr(39) . zipFile . Chr(39) . ", " 
+           . Chr(39) . extractDir . Chr(39) . ")}" . Chr(34)
     
     try {
         RunWait(psCmd, , "Hide")
