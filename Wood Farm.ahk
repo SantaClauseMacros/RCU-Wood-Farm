@@ -70,11 +70,17 @@ if (remoteVersion != localVersion)
         return
     }
 
-    repoRoot := extractDir "\RCU-Wood-Farm-main"
+    ; Find the actual extracted folder (should be the only subfolder)
+    repoRoot := ""
+    Loop Files, extractDir "\*", "D"
+    {
+        repoRoot := A_LoopFileFullPath
+        break ; Get first (and should be only) directory
+    }
 
     ; Verify extraction succeeded
-    if !DirExist(repoRoot) {
-        MsgBox("Extraction folder not found at: " repoRoot, "Update Error")
+    if (repoRoot = "" || !DirExist(repoRoot)) {
+        MsgBox("No extracted folder found in: " extractDir, "Update Error")
         return
     }
 
