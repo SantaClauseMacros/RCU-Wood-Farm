@@ -501,34 +501,12 @@ StartWoodFarming(woodType) {
     }
 }
 
-LookForGoldenTrees() {
-    targetColor := 0xFFDB3B
-    colorVariation := 20
-    
-    searchBoxes := [
-        {x1: 346, y1: 265, x2: 374, y2: 343},
-        {x1: 413, y1: 272, x2: 448, y2: 336},
-        {x1: 340, y1: 251, x2: 439, y2: 282}
-    ]
-
-    for index, box in searchBoxes {
-        if PixelSearch(&foundX, &foundY, box.x1, box.y1, box.x2, box.y2, targetColor, colorVariation) {
-            RobloxClick(foundX, foundY)
-            WaitForTreeToBreak()
-            return true
-        }
-    }
-    
-    return false
-}
-
 WaitForTreeToBreak() {
     global
     Sleep(250)
     colorFound := false
     timeout := 0
     
-    ; Wait up to 1 second for blue color to appear
     while (!colorFound && timeout < 10) {
         if (!FarmingActive)
             return
@@ -541,28 +519,23 @@ WaitForTreeToBreak() {
         }
     }
     
-    ; If blue never appeared, skip
     if (!colorFound) {
         return
     }
     
-    ; Wait for blue to disappear (tree broken)
     while (PixelSearch(&foundX, &foundY, 320, 518, 320, 518, 0x2FB7FC)) {
         if (!FarmingActive)
             return
         Sleep(100)
     }
-    
     Sleep(250)
-    LookForGoldenTrees()
 }
 
-; FIXED: Added 10 second timeout
 WaitForClickButton() {
     Sleep 250
     imagePath := A_ScriptDir "\images\Click Button.png"
     timeout := 0
-    maxTimeout := 100  ; 10 seconds (100 * 100ms)
+    maxTimeout := 100
     
     Loop {
         if ImageSearch(&x, &y, 0, 0, A_ScreenWidth, A_ScreenHeight, "*50 " imagePath) {
@@ -577,12 +550,11 @@ WaitForClickButton() {
     }
 }
 
-; FIXED: Added 10 second timeout
 WaitForTeleportIcon() {
     Sleep 250
     imagePath := A_ScriptDir "\images\Teleport Icon.png"
     timeout := 0
-    maxTimeout := 100  ; 10 seconds (100 * 100ms)
+    maxTimeout := 100
     
     Loop {
         if ImageSearch(&x, &y, 0, 0, A_ScreenWidth, A_ScreenHeight, "*50 " imagePath) {
@@ -599,10 +571,10 @@ WaitForTeleportIcon() {
 
 SpawnWorldCameraSetup() {
     Loop 20 {
-        RobloxSendKey("{WheelUp}")  ; FIXED: Consistent with RobloxSendKey
+        RobloxSendKey("{WheelUp}")
     }
     Loop 15 {
-        RobloxSendKey("{WheelDown}")  ; FIXED: Consistent with RobloxSendKey
+        RobloxSendKey("{WheelDown}")
     }
 }
 
@@ -641,7 +613,7 @@ FarmWoodTrees() {
             WaitForTreeToBreak()
             
             if (index = 8) {
-                RobloxSendKey("{WheelUp}")  ; FIXED: Consistent with RobloxSendKey
+                RobloxSendKey("{WheelUp}")
             }
         }
 
@@ -654,10 +626,10 @@ FarmWoodTrees() {
 
 DesertWorldCameraSetup() {
     Loop 20 {
-        RobloxSendKey("{WheelUp}")  ; FIXED: Consistent with RobloxSendKey
+        RobloxSendKey("{WheelUp}")
     }
     Loop 15 {
-        RobloxSendKey("{WheelDown}")  ; FIXED: Consistent with RobloxSendKey
+        RobloxSendKey("{WheelDown}")
     }
 }
 
@@ -696,7 +668,7 @@ FarmCactusTrees() {
             
             if (index = 4) {
                 Loop 4 {
-                    RobloxSendKey("{WheelUp}")  ; FIXED: Consistent with RobloxSendKey
+                    RobloxSendKey("{WheelUp}")
                 }
             }
         }
